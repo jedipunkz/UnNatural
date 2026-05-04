@@ -32,13 +32,13 @@ private struct MenuBarContent: View {
     @Environment(\.openSettings) private var openSettings
 
     private var statusLabel: String {
-        guard scrollReverser.isEnabled else { return "無効 (権限なし)" }
-        return settings.isActive ? "有効" : "無効"
+        guard scrollReverser.isEnabled else { return "Disabled (Permission Required)" }
+        return settings.isActive ? "Enabled" : "Disabled"
     }
 
     var body: some View {
         Section(statusLabel) {
-            Toggle("有効にする", isOn: $settings.isActive)
+            Toggle("Enable", isOn: $settings.isActive)
                 .disabled(!scrollReverser.isEnabled)
         }
 

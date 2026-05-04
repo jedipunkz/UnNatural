@@ -42,7 +42,7 @@ make open
 
 1. Open `UnNatural.app`.
 2. Click the UnNatural menu bar icon.
-3. Choose `Setting`.
+3. Choose `Settings...`.
 4. Click `Open Permission`.
 5. Enable `UnNatural` in `Privacy & Security > Accessibility`.
 6. Enable `Mouse` and/or `Trackpad`.

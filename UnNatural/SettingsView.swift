@@ -13,14 +13,14 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("スクロール反転") {
+            Section("Scroll Reversal") {
                 Toggle(isOn: $settings.isActive) {
-                    Label("有効にする", systemImage: settings.isActive ? "checkmark.circle.fill" : "circle")
+                    Label("Enable", systemImage: settings.isActive ? "checkmark.circle.fill" : "circle")
                 }
                 .toggleStyle(.checkbox)
             }
 
-            Section("対象デバイス") {
+            Section("Devices") {
                 Toggle("Trackpad", isOn: $settings.reverseTrackpad)
                     .disabled(!settings.isActive)
                 Toggle("Mouse", isOn: $settings.reverseMouse)
@@ -28,7 +28,7 @@ struct SettingsView: View {
             }
 
             Section {
-                Toggle("ログイン時に起動", isOn: $settings.launchAtLogin)
+                Toggle("Launch at Login", isOn: $settings.launchAtLogin)
             }
 
             Section {
