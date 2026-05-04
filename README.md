@@ -1,6 +1,12 @@
 # UnNatural
 
+<p align="center">
+  <img src="UnNatural/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" alt="UnNatural icon" width="128">
+</p>
+
 UnNatural is a macOS menu bar app that reverses scroll direction separately for mouse and trackpad.
+
+Author: jedipunkz
 
 ## Features
 
@@ -48,16 +54,3 @@ make open
 6. Enable `Mouse` and/or `Trackpad`.
 
 If scrolling does not change immediately, quit and reopen `UnNatural.app` after granting Accessibility permission.
-
-## Make Targets
-
-```bash
-make build    # Build into .DerivedData
-make install  # Build and copy UnNatural.app to /Applications
-make open     # Build, install, and launch
-make clean    # Clean Xcode build products
-```
-
-## Distribution Note
-
-UnNatural uses low-level macOS input event handling and requires Accessibility permission. It is intended for direct distribution, for example via GitHub Releases or Homebrew Cask, rather than the Mac App Store.
