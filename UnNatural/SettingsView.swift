@@ -20,9 +20,13 @@ struct SettingsView: View {
             }
 
             Section("Devices") {
-                Toggle("Trackpad", isOn: $settings.reverseTrackpad)
+                Toggle("Trackpad (Up/Down)", isOn: $settings.reverseTrackpad)
                     .disabled(!settings.isActive)
-                Toggle("Mouse", isOn: $settings.reverseMouse)
+                Toggle("Trackpad (Left/Right)", isOn: $settings.reverseTrackpadHorizontal)
+                    .disabled(!settings.isActive)
+                Toggle("Mouse (Up/Down)", isOn: $settings.reverseMouse)
+                    .disabled(!settings.isActive)
+                Toggle("Mouse (Left/Right)", isOn: $settings.reverseMouseHorizontal)
                     .disabled(!settings.isActive)
             }
 
