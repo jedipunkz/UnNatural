@@ -32,9 +32,7 @@ struct SettingsView: View {
                     .disabled(!settings.isActive)
             }
 
-            if !scrollReverser.isEnabled {
-                permissionSection
-            }
+            permissionSection
         }
         .toggleStyle(.switch)
         .padding(20)
@@ -45,10 +43,10 @@ struct SettingsView: View {
     private var permissionSection: some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(Color.orange)
+                .fill(scrollReverser.isEnabled ? Color.green : Color.orange)
                 .frame(width: 8, height: 8)
 
-            Text("Accessibility permission is required")
+            Text(scrollReverser.isEnabled ? "Accessibility permission is enabled" : "Accessibility permission is required")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
@@ -76,6 +74,12 @@ private struct SettingsSection<Content: View>: View {
             VStack(alignment: .leading, spacing: 8) {
                 content
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(.quaternary)
         }
     }
 }
