@@ -14,10 +14,9 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Scroll Reversal") {
-                Toggle(isOn: $settings.isActive) {
-                    Label("Enable", systemImage: settings.isActive ? "checkmark.circle.fill" : "circle")
-                }
-                .toggleStyle(.checkbox)
+                Toggle("Enable", isOn: $settings.isActive)
+                    .toggleStyle(.switch)
+                Toggle("Launch at Login", isOn: $settings.launchAtLogin)
             }
 
             Section("Devices") {
@@ -27,24 +26,22 @@ struct SettingsView: View {
                     .disabled(!settings.isActive)
             }
 
-            Section {
-                Toggle("Launch at Login", isOn: $settings.launchAtLogin)
-            }
+            if !scrollReverser.isEnabled {
+                Section {
+                    HStack {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 8, height: 8)
 
-            Section {
-                HStack {
-                    Circle()
-                        .fill(scrollReverser.isEnabled ? Color.green : Color.orange)
-                        .frame(width: 8, height: 8)
+                        Text("Accessibility permission is required")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
 
-                    Text(scrollReverser.isEnabled ? "Scroll monitor is active" : "Accessibility permission is required")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
+                        Spacer()
 
-                    Spacer()
-
-                    Button("Open Permission") {
-                        scrollReverser.requestAccessibilityPermission()
+                        Button("Open Permission") {
+                            scrollReverser.requestAccessibilityPermission()
+                        }
                     }
                 }
             }
