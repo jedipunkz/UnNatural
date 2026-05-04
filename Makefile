@@ -7,7 +7,7 @@ BUILT_APP := $(DERIVED_DATA)/Build/Products/$(CONFIGURATION)/$(APP_NAME)
 INSTALL_DIR := /Applications
 INSTALLED_APP := $(INSTALL_DIR)/$(APP_NAME)
 
-.PHONY: build install open clean
+.PHONY: build install open clean uninstall reinstall
 
 build:
 	xcodebuild \
@@ -23,6 +23,11 @@ install: build
 
 open: install
 	open "$(INSTALLED_APP)"
+
+uninstall:
+	rm -rf "$(INSTALLED_APP)"
+
+reinstall: uninstall install
 
 clean:
 	xcodebuild \
