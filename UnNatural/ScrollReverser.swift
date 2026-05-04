@@ -201,6 +201,11 @@ final class ScrollReverser: ObservableObject {
         }
 
         let defaults = UserDefaults.standard
+
+        guard defaults.bool(forKey: "isActive") else {
+            return Unmanaged.passUnretained(event)
+        }
+
         let source = state.source(for: event)
         let shouldReverse: Bool
         switch source {

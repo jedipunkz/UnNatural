@@ -14,6 +14,13 @@ final class AppSettings: ObservableObject {
     private enum Key {
         static let reverseTrackpad = "reverseTrackpad"
         static let reverseMouse = "reverseMouse"
+        static let isActive = "isActive"
+    }
+
+    @Published var isActive: Bool {
+        didSet {
+            UserDefaults.standard.set(isActive, forKey: Key.isActive)
+        }
     }
 
     @Published var reverseTrackpad: Bool {
@@ -41,7 +48,11 @@ final class AppSettings: ObservableObject {
         if defaults.object(forKey: Key.reverseTrackpad) == nil {
             defaults.set(true, forKey: Key.reverseTrackpad)
         }
+        if defaults.object(forKey: Key.isActive) == nil {
+            defaults.set(true, forKey: Key.isActive)
+        }
 
+        isActive = defaults.bool(forKey: Key.isActive)
         reverseTrackpad = defaults.bool(forKey: Key.reverseTrackpad)
         reverseMouse = defaults.bool(forKey: Key.reverseMouse)
         launchAtLogin = SMAppService.mainApp.status == .enabled
