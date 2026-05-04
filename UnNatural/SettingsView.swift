@@ -13,7 +13,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Scroll Reversal") {
+            Section("Basic") {
                 Toggle("Enable", isOn: $settings.isActive)
                     .toggleStyle(.switch)
                 Toggle("Launch at Login", isOn: $settings.launchAtLogin)
