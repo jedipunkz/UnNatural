@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "**/*.swift"
   pull_request:
+    paths:
+      - "**/*.swift"
   workflow_dispatch:
 
 jobs:
