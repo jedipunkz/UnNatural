@@ -12,21 +12,20 @@ struct SettingsView: View {
     @ObservedObject var scrollReverser: ScrollReverser
 
     var body: some View {
-        Form {
-            Section("Basic") {
+        VStack(alignment: .leading, spacing: 16) {
+            SettingsSection(title: "Basic") {
                 Toggle("Enable", isOn: $settings.isActive)
-                    .toggleStyle(.switch)
                 Toggle("Launch at Login", isOn: $settings.launchAtLogin)
             }
 
-            Section("Mouse Reverse") {
+            SettingsSection(title: "Mouse Reverse") {
                 Toggle("Up/Down", isOn: $settings.reverseMouse)
                     .disabled(!settings.isActive)
                 Toggle("Left/Right", isOn: $settings.reverseMouseHorizontal)
                     .disabled(!settings.isActive)
             }
 
-            Section("Trackpad Reverse") {
+            SettingsSection(title: "Trackpad Reverse") {
                 Toggle("Up/Down", isOn: $settings.reverseTrackpad)
                     .disabled(!settings.isActive)
                 Toggle("Left/Right", isOn: $settings.reverseTrackpadHorizontal)
@@ -34,27 +33,49 @@ struct SettingsView: View {
             }
 
             if !scrollReverser.isEnabled {
-                Section {
-                    HStack {
-                        Circle()
-                            .fill(Color.orange)
-                            .frame(width: 8, height: 8)
-
-                        Text("Accessibility permission is required")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Button("Open Permission") {
-                            scrollReverser.requestAccessibilityPermission()
-                        }
-                    }
-                }
+                permissionSection
             }
         }
-        .formStyle(.grouped)
+        .toggleStyle(.switch)
         .padding(20)
-        .frame(width: 420)
+        .frame(width: 440)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var permissionSection: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color.orange)
+                .frame(width: 8, height: 8)
+
+            Text("Accessibility permission is required")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 16)
+
+            Button("Open Preferences") {
+                scrollReverser.requestAccessibilityPermission()
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(12)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private struct SettingsSection<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 8) {
+                content
+            }
+        }
     }
 }

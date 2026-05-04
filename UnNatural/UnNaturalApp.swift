@@ -23,6 +23,7 @@ struct UnNaturalApp: App {
         Settings {
             SettingsView(settings: settings, scrollReverser: scrollReverser)
         }
+        .windowResizability(.contentSize)
     }
 }
 
@@ -30,7 +31,7 @@ private struct MenuBarContent: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Button("Settings...") {
+        Button("Settings") {
             openSettings()
             NSApp.activate(ignoringOtherApps: true)
         }
