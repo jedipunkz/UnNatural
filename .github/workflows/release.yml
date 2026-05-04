@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: Version bump
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and release
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Bump version
+        id: version
+        env:
+          VERSION_BUMP: ${{ inputs.version_bump }}
+        run: |
+          set -euo pipefail
+
+          current_version="$(sed -n 's/.*MARKETING_VERSION = \([^;]*\);.*/\1/p' UnNatural.xcodeproj/project.pbxproj | head -n 1)"
+          current_build="$(sed -n 's/.*CURRENT_PROJECT_VERSION = \([^;]*\);.*/\1/p' UnNatural.xcodeproj/project.pbxproj | head -n 1)"
+
+          IFS=. read -r major minor patch <<< "$current_version"
+          major="${major:-0}"
+          minor="${minor:-0}"
+          patch="${patch:-0}"
+
+          case "$VERSION_BUMP" in
+            patch)
+              patch=$((patch + 1))
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            *)
+              echo "Unknown version bump: $VERSION_BUMP" >&2
+              exit 1
+              ;;
+          esac
+
+          new_version="${major}.${minor}.${patch}"
+          new_build=$((current_build + 1))
+          tag="v${new_version}"
+
+          if git rev-parse "$tag" >/dev/null 2>&1; then
+            echo "Tag already exists: $tag" >&2
+            exit 1
+          fi
+
+          perl -0pi -e "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = ${new_version};/g; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = ${new_build};/g" UnNatural.xcodeproj/project.pbxproj
+
+          {
+            echo "version=$new_version"
+            echo "build=$new_build"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add UnNatural.xcodeproj/project.pbxproj
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}"
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Build app
+        run: |
+          set -euo pipefail
+
+          xcodebuild \
+            -project UnNatural.xcodeproj \
+            -scheme UnNatural \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package app
+        id: package
+        run: |
+          set -euo pipefail
+
+          app_path="$RUNNER_TEMP/DerivedData/Build/Products/Release/UnNatural.app"
+          artifact="UnNatural-${{ steps.version.outputs.version }}.app.zip"
+
+          test -d "$app_path"
+          ditto -c -k --sequesterRsrc --keepParent "$app_path" "$artifact"
+
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "${{ steps.package.outputs.artifact }}" \
+            --title "UnNatural ${{ steps.version.outputs.version }}" \
+            --notes "Build ${{ steps.version.outputs.build }}"
