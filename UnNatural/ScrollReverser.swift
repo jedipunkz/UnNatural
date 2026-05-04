@@ -207,44 +207,54 @@ final class ScrollReverser: ObservableObject {
         }
 
         let source = state.source(for: event)
-        let shouldReverse: Bool
+        let reverseVertical: Bool
+        let reverseHorizontal: Bool
         switch source {
         case .trackpad:
-            shouldReverse = defaults.bool(forKey: "reverseTrackpad")
+            reverseVertical = defaults.bool(forKey: "reverseTrackpad")
+            reverseHorizontal = defaults.bool(forKey: "reverseTrackpadHorizontal")
         case .mouse:
-            shouldReverse = defaults.bool(forKey: "reverseMouse")
+            reverseVertical = defaults.bool(forKey: "reverseMouse")
+            reverseHorizontal = defaults.bool(forKey: "reverseMouseHorizontal")
         }
 
-        if shouldReverse {
-            reverseScrollEvent(event)
+        if reverseVertical || reverseHorizontal {
+            reverseScrollEvent(event, reverseVertical: reverseVertical, reverseHorizontal: reverseHorizontal)
         }
 
         return Unmanaged.passUnretained(event)
     }
 
     @discardableResult
-    private nonisolated static func reverseScrollEvent(_ event: CGEvent) -> Bool {
+    private nonisolated static func reverseScrollEvent(_ event: CGEvent, reverseVertical: Bool, reverseHorizontal: Bool) -> Bool {
         let values = ScrollEventValues(event: event)
 
-        event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: -values.deltaY)
-        event.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: -values.deltaX)
-        event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1, value: -values.fixedDeltaY)
-        event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2, value: -values.fixedDeltaX)
-        event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: -values.pointDeltaY)
-        event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: -values.pointDeltaX)
+        if reverseVertical {
+            event.setIntegerValueField(.scrollWheelEventDeltaAxis1, value: -values.deltaY)
+            event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis1, value: -values.fixedDeltaY)
+            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: -values.pointDeltaY)
+        }
+        if reverseHorizontal {
+            event.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: -values.deltaX)
+            event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2, value: -values.fixedDeltaX)
+            event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: -values.pointDeltaX)
+        }
 
         guard let ioHidEvent = CGEventCopyIOHIDEvent(event) else {
             return false
         }
 
-        let y = IOHIDEventGetFloatValue(ioHidEvent, kIOHIDEventFieldScrollY)
-        if y != 0 {
-            IOHIDEventSetFloatValue(ioHidEvent, kIOHIDEventFieldScrollY, -y)
+        if reverseVertical {
+            let y = IOHIDEventGetFloatValue(ioHidEvent, kIOHIDEventFieldScrollY)
+            if y != 0 {
+                IOHIDEventSetFloatValue(ioHidEvent, kIOHIDEventFieldScrollY, -y)
+            }
         }
-
-        let x = IOHIDEventGetFloatValue(ioHidEvent, kIOHIDEventFieldScrollX)
-        if x != 0 {
-            IOHIDEventSetFloatValue(ioHidEvent, kIOHIDEventFieldScrollX, -x)
+        if reverseHorizontal {
+            let x = IOHIDEventGetFloatValue(ioHidEvent, kIOHIDEventFieldScrollX)
+            if x != 0 {
+                IOHIDEventSetFloatValue(ioHidEvent, kIOHIDEventFieldScrollX, -x)
+            }
         }
 
         CFReleaseSPI(ioHidEvent)

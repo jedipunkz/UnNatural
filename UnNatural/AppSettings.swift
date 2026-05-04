@@ -13,7 +13,9 @@ import ServiceManagement
 final class AppSettings: ObservableObject {
     private enum Key {
         static let reverseTrackpad = "reverseTrackpad"
+        static let reverseTrackpadHorizontal = "reverseTrackpadHorizontal"
         static let reverseMouse = "reverseMouse"
+        static let reverseMouseHorizontal = "reverseMouseHorizontal"
         static let isActive = "isActive"
     }
 
@@ -29,9 +31,21 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var reverseTrackpadHorizontal: Bool {
+        didSet {
+            UserDefaults.standard.set(reverseTrackpadHorizontal, forKey: Key.reverseTrackpadHorizontal)
+        }
+    }
+
     @Published var reverseMouse: Bool {
         didSet {
             UserDefaults.standard.set(reverseMouse, forKey: Key.reverseMouse)
+        }
+    }
+
+    @Published var reverseMouseHorizontal: Bool {
+        didSet {
+            UserDefaults.standard.set(reverseMouseHorizontal, forKey: Key.reverseMouseHorizontal)
         }
     }
 
@@ -54,7 +68,9 @@ final class AppSettings: ObservableObject {
 
         isActive = defaults.bool(forKey: Key.isActive)
         reverseTrackpad = defaults.bool(forKey: Key.reverseTrackpad)
+        reverseTrackpadHorizontal = defaults.bool(forKey: Key.reverseTrackpadHorizontal)
         reverseMouse = defaults.bool(forKey: Key.reverseMouse)
+        reverseMouseHorizontal = defaults.bool(forKey: Key.reverseMouseHorizontal)
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
