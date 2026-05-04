@@ -16,7 +16,7 @@ struct UnNaturalApp: App {
 
     var body: some Scene {
         MenuBarExtra("UnNatural", systemImage: "arrow.up.arrow.down") {
-            MenuBarContent(settings: settings, scrollReverser: scrollReverser)
+            MenuBarContent()
         }
         .menuBarExtraStyle(.menu)
 
@@ -27,23 +27,9 @@ struct UnNaturalApp: App {
 }
 
 private struct MenuBarContent: View {
-    @ObservedObject var settings: AppSettings
-    @ObservedObject var scrollReverser: ScrollReverser
     @Environment(\.openSettings) private var openSettings
 
-    private var statusLabel: String {
-        guard scrollReverser.isEnabled else { return "Disabled (Permission Required)" }
-        return settings.isActive ? "Enabled" : "Disabled"
-    }
-
     var body: some View {
-        Section(statusLabel) {
-            Toggle("Enable", isOn: $settings.isActive)
-                .disabled(!scrollReverser.isEnabled)
-        }
-
-        Divider()
-
         Button("Settings...") {
             openSettings()
             NSApp.activate(ignoringOtherApps: true)
