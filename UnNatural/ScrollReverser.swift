@@ -51,7 +51,27 @@ final class ScrollReverser: ObservableObject {
         ] as CFDictionary
 
         _ = AXIsProcessTrustedWithOptions(options)
+        openAccessibilitySettings()
         start()
+    }
+
+    private func openAccessibilitySettings() {
+        let urls = [
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+            "x-apple.systempreferences:com.apple.preference.security?Privacy"
+        ]
+
+        for urlString in urls {
+            guard let url = URL(string: urlString) else { continue }
+            if NSWorkspace.shared.open(url) {
+                NSApp.activate(ignoringOtherApps: true)
+                return
+            }
+        }
+
+        if let settingsURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.systempreferences") {
+            NSWorkspace.shared.open(settingsURL)
+        }
     }
 
     func start() {
