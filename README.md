@@ -6,8 +6,6 @@
 
 UnNatural is a macOS menu bar app that reverses scroll direction separately for mouse and trackpad.
 
-Author: jedipunkz
-
 ## Screenshot
 
 <p align="center">
@@ -60,3 +58,11 @@ make open
 6. Enable `Mouse` and/or `Trackpad`.
 
 If scrolling does not change immediately, quit and reopen `UnNatural.app` after granting Accessibility permission.
+
+### Author
+
+jedipunkz
+
+### LICENSE
+
+MIT
