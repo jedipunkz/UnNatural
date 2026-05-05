@@ -8,6 +8,12 @@ UnNatural is a macOS menu bar app that reverses scroll direction separately for 
 
 Author: jedipunkz
 
+## Screenshot
+
+<p align="center">
+  <img src="screenshot.png" alt="UnNatural Settings screenshot" width="552">
+</p>
+
 ## Features
 
 - Lives in the macOS menu bar
