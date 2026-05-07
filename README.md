@@ -20,12 +20,24 @@ UnNatural is a macOS menu bar app that reverses scroll direction separately for 
 - Supports launch at login
 - Opens the Accessibility permission screen from Settings
 
+## Requirements
+
+- macOS
+- Xcode
+
 ## Installation
 
-Download App and place /Applications Directory.
-https://github.com/jedipunkz/UnNatural/releases
+Clone the repository and build the app with `xcodebuild`.
 
-and set Accessibility permission for `UnNatural.app`
+```bash
+git clone https://github.com/jedipunkz/UnNatural.git
+cd UnNatural
+make install
+```
+
+This installs the built app to `/Applications/UnNatural.app`.
+
+Then grant Accessibility permission for `UnNatural.app`.
 
 1. Open `UnNatural.app`.
 2. Click the UnNatural menu bar icon.
@@ -38,14 +50,10 @@ If scrolling does not change immediately, quit and reopen `UnNatural.app` after 
 
 ## Build
 
-You need Xcode to build.
-
-Clone the repository and install the app into `/Applications`.
+Build without installing:
 
 ```bash
-git clone https://github.com/jedipunkz/UnNatural.git
-cd UnNatural
-make install
+make build
 ```
 
 Launch it:
