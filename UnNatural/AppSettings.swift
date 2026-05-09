@@ -19,6 +19,7 @@ final class AppSettings: ObservableObject {
         static let reverseMouseHorizontal = "reverseMouseHorizontal"
         static let reverseMouseHid = "reverseMouseHid"
         static let isActive = "isActive"
+        static let reverseHid = "reverseHid"
     }
 
     @Published var isActive: Bool {
@@ -78,6 +79,14 @@ final class AppSettings: ObservableObject {
         }
         if defaults.object(forKey: Key.isActive) == nil {
             defaults.set(true, forKey: Key.isActive)
+        }
+        if defaults.object(forKey: Key.reverseTrackpadHid) == nil,
+           let legacyReverseHid = defaults.object(forKey: Key.reverseHid) as? Bool {
+            defaults.set(legacyReverseHid, forKey: Key.reverseTrackpadHid)
+        }
+        if defaults.object(forKey: Key.reverseMouseHid) == nil,
+           let legacyReverseHid = defaults.object(forKey: Key.reverseHid) as? Bool {
+            defaults.set(legacyReverseHid, forKey: Key.reverseMouseHid)
         }
 
         isActive = defaults.bool(forKey: Key.isActive)
