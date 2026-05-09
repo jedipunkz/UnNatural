@@ -8,16 +8,17 @@
 import ApplicationServices
 import AppKit
 import Combine
+import Darwin
 import Foundation
 
 private typealias IOHIDEventRef = UnsafeMutableRawPointer
 private typealias IOHIDEventField = UInt32
 private typealias IOHIDFloat = Double
 
-private let kIOHIDEventTypeScroll: UInt32 = 6
-private let kIOHIDEventFieldScrollBase = kIOHIDEventTypeScroll << 16
-private let kIOHIDEventFieldScrollX = kIOHIDEventFieldScrollBase | 0
-private let kIOHIDEventFieldScrollY = kIOHIDEventFieldScrollBase | 1
+nonisolated private let kIOHIDEventTypeScroll: UInt32 = 6
+nonisolated private let kIOHIDEventFieldScrollBase = kIOHIDEventTypeScroll << 16
+nonisolated private let kIOHIDEventFieldScrollX = kIOHIDEventFieldScrollBase | 0
+nonisolated private let kIOHIDEventFieldScrollY = kIOHIDEventFieldScrollBase | 1
 
 @_silgen_name("CGEventCopyIOHIDEvent")
 nonisolated private func CGEventCopyIOHIDEvent(_ event: CGEvent) -> IOHIDEventRef?
@@ -35,11 +36,28 @@ nonisolated private func CFReleaseSPI(_ value: IOHIDEventRef)
 final class ScrollReverser: ObservableObject {
     @Published private(set) var isEnabled = false
 
+    private static let iPhoneMirroringBundleID = "com.apple.ScreenContinuity"
+    private static let swipeScrollDirectionKey = "com.apple.swipescrolldirection"
+    private static let swipeScrollDirectionDidChangeNotification = Notification.Name("SwipeScrollDirectionDidChangeNotification")
+    private typealias SetSwipeScrollDirectionFunction = @convention(c) (Bool) -> Void
+    private static let setSwipeScrollDirectionFunction: SetSwipeScrollDirectionFunction? = {
+        let path = "/System/Library/PrivateFrameworks/PreferencePanesSupport.framework/PreferencePanesSupport"
+        guard let handle = dlopen(path, RTLD_NOW),
+              let symbol = dlsym(handle, "setSwipeScrollDirection") else {
+            return nil
+        }
+        return unsafeBitCast(symbol, to: SetSwipeScrollDirectionFunction.self)
+    }()
+
     private let eventState = ScrollEventState()
     private var activeEventTap: CFMachPort?
     private var activeRunLoopSource: CFRunLoopSource?
     private var passiveEventTap: CFMachPort?
     private var passiveRunLoopSource: CFRunLoopSource?
+    private var cancellables = Set<AnyCancellable>()
+    private var savedSwipeScrollDirection: Bool?
+    private var appliedSwipeScrollDirection: Bool?
+    private var isIPhoneMirroringFrontmost = false
 
     init() {
         start()
@@ -118,9 +136,14 @@ final class ScrollReverser: ObservableObject {
         CGEvent.tapEnable(tap: activeTap, enable: true)
         CGEvent.tapEnable(tap: passiveTap, enable: true)
         isEnabled = true
+
+        observeActiveApplication()
     }
 
     func stop() {
+        restoreSwipeScrollDirectionIfNeeded()
+        cancellables.removeAll()
+
         if let tap = activeEventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
@@ -144,6 +167,120 @@ final class ScrollReverser: ObservableObject {
         passiveEventTap = nil
         passiveRunLoopSource = nil
         isEnabled = false
+    }
+
+    private func observeActiveApplication() {
+        let bundleID = Self.iPhoneMirroringBundleID
+        let state = eventState
+
+        func updateIPhoneMirroringProcesses() {
+            let processIDs = NSWorkspace.shared.runningApplications
+                .filter { $0.bundleIdentifier == bundleID }
+                .map(\.processIdentifier)
+            state.setIPhoneMirroringProcessIDs(processIDs)
+        }
+
+        let current = NSWorkspace.shared.frontmostApplication
+        setIPhoneMirroringFrontmost(current?.bundleIdentifier == bundleID)
+        updateIPhoneMirroringProcesses()
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.didActivateApplicationNotification)
+            .receive(on: RunLoop.main)
+            .sink { notification in
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                self.setIPhoneMirroringFrontmost(app?.bundleIdentifier == bundleID)
+            }
+            .store(in: &cancellables)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.didLaunchApplicationNotification)
+            .merge(with: NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification))
+            .receive(on: RunLoop.main)
+            .sink { _ in
+                updateIPhoneMirroringProcesses()
+            }
+            .store(in: &cancellables)
+
+        NotificationCenter.default
+            .publisher(for: UserDefaults.didChangeNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.applyIPhoneMirroringScrollDirection()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func setIPhoneMirroringFrontmost(_ value: Bool) {
+        isIPhoneMirroringFrontmost = value
+        eventState.setIPhoneMirroringFrontmost(value)
+        applyIPhoneMirroringScrollDirection()
+    }
+
+    private func applyIPhoneMirroringScrollDirection() {
+        let defaults = UserDefaults.standard
+        let shouldReverse = isIPhoneMirroringFrontmost &&
+            defaults.bool(forKey: "isActive") &&
+            defaults.bool(forKey: "reverseHid")
+
+        guard shouldReverse else {
+            restoreSwipeScrollDirectionIfNeeded()
+            return
+        }
+
+        let originalDirection = savedSwipeScrollDirection ?? Self.currentSwipeScrollDirection()
+        savedSwipeScrollDirection = originalDirection
+        setSwipeScrollDirectionIfNeeded(!originalDirection)
+    }
+
+    private func restoreSwipeScrollDirectionIfNeeded() {
+        guard let originalDirection = savedSwipeScrollDirection else {
+            return
+        }
+
+        setSwipeScrollDirectionIfNeeded(originalDirection)
+        savedSwipeScrollDirection = nil
+        appliedSwipeScrollDirection = nil
+    }
+
+    private func setSwipeScrollDirectionIfNeeded(_ enabled: Bool) {
+        guard appliedSwipeScrollDirection != enabled else {
+            return
+        }
+
+        Self.setSwipeScrollDirection(enabled)
+        appliedSwipeScrollDirection = enabled
+    }
+
+    private static func currentSwipeScrollDirection() -> Bool {
+        guard let value = UserDefaults.standard.object(forKey: swipeScrollDirectionKey) as? Bool else {
+            return true
+        }
+        return value
+    }
+
+    private static func setSwipeScrollDirection(_ enabled: Bool) {
+        if let setSwipeScrollDirectionFunction {
+            setSwipeScrollDirectionFunction(enabled)
+        } else {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
+            process.arguments = ["write", "-g", swipeScrollDirectionKey, "-bool", enabled ? "YES" : "NO"]
+
+            do {
+                try process.run()
+                process.waitUntilExit()
+            } catch {
+                NSLog("Failed to update swipe scroll direction: \(error.localizedDescription)")
+            }
+        }
+
+        DistributedNotificationCenter.default().postNotificationName(
+            swipeScrollDirectionDidChangeNotification,
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: false
+        )
     }
 
     private nonisolated static func makeTap(location: CGEventTapLocation, mask: CGEventMask, userInfo: UnsafeMutableRawPointer?) -> CFMachPort? {
@@ -209,13 +346,18 @@ final class ScrollReverser: ObservableObject {
         let source = state.source(for: event)
         let reverseVertical: Bool
         let reverseHorizontal: Bool
-        switch source {
-        case .trackpad:
-            reverseVertical = defaults.bool(forKey: "reverseTrackpad")
-            reverseHorizontal = defaults.bool(forKey: "reverseTrackpadHorizontal")
-        case .mouse:
-            reverseVertical = defaults.bool(forKey: "reverseMouse")
-            reverseHorizontal = defaults.bool(forKey: "reverseMouseHorizontal")
+        if state.isIPhoneMirroringEvent(event) {
+            reverseVertical = defaults.bool(forKey: "reverseHid")
+            reverseHorizontal = false
+        } else {
+            switch source {
+            case .trackpad:
+                reverseVertical = defaults.bool(forKey: "reverseTrackpad")
+                reverseHorizontal = defaults.bool(forKey: "reverseTrackpadHorizontal")
+            case .mouse:
+                reverseVertical = defaults.bool(forKey: "reverseMouse")
+                reverseHorizontal = defaults.bool(forKey: "reverseMouseHorizontal")
+            }
         }
 
         if reverseVertical || reverseHorizontal {
@@ -294,13 +436,43 @@ private final class ScrollEventState: @unchecked Sendable {
     nonisolated(unsafe) private var lastTouchTime: UInt64 = 0
     nonisolated(unsafe) private var touching = 0
     nonisolated(unsafe) private var lastSource = ScrollEventSource.mouse
+    nonisolated(unsafe) private var iPhoneMirroringFrontmost = false
+    nonisolated(unsafe) private var iPhoneMirroringProcessIDs = Set<pid_t>()
 
     nonisolated func reset() {
         lock.lock()
         lastTouchTime = 0
         touching = 0
         lastSource = .mouse
+        iPhoneMirroringFrontmost = false
+        iPhoneMirroringProcessIDs.removeAll()
         lock.unlock()
+    }
+
+    nonisolated func setIPhoneMirroringFrontmost(_ value: Bool) {
+        lock.lock()
+        iPhoneMirroringFrontmost = value
+        lock.unlock()
+    }
+
+    nonisolated func isIPhoneMirroringFrontmost() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return iPhoneMirroringFrontmost
+    }
+
+    nonisolated func setIPhoneMirroringProcessIDs(_ processIDs: [pid_t]) {
+        lock.lock()
+        iPhoneMirroringProcessIDs = Set(processIDs)
+        lock.unlock()
+    }
+
+    nonisolated func isIPhoneMirroringEvent(_ event: CGEvent) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let targetPID = pid_t(event.getIntegerValueField(.eventTargetUnixProcessID))
+        return iPhoneMirroringFrontmost || iPhoneMirroringProcessIDs.contains(targetPID)
     }
 
     nonisolated func recordTrackpadTouch(count: Int) {
