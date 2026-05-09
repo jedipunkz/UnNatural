@@ -18,7 +18,7 @@ struct SettingsView: View {
                 Toggle("Launch at Login", isOn: $settings.launchAtLogin)
             }
 
-            SettingsSection(title: "HID Reverse") {
+            SettingsSection(title: "iPhone Mirroring App Reverse") {
                 Toggle("Up/Down", isOn: $settings.reverseHid)
                     .disabled(!settings.isActive)
             }
