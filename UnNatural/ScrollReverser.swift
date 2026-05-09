@@ -35,11 +35,14 @@ nonisolated private func CFReleaseSPI(_ value: IOHIDEventRef)
 final class ScrollReverser: ObservableObject {
     @Published private(set) var isEnabled = false
 
+    private static let iPhoneMirroringBundleID = "com.apple.iPhone-Mirroring"
+
     private let eventState = ScrollEventState()
     private var activeEventTap: CFMachPort?
     private var activeRunLoopSource: CFRunLoopSource?
     private var passiveEventTap: CFMachPort?
     private var passiveRunLoopSource: CFRunLoopSource?
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         start()
@@ -118,9 +121,13 @@ final class ScrollReverser: ObservableObject {
         CGEvent.tapEnable(tap: activeTap, enable: true)
         CGEvent.tapEnable(tap: passiveTap, enable: true)
         isEnabled = true
+
+        observeActiveApplication()
     }
 
     func stop() {
+        cancellables.removeAll()
+
         if let tap = activeEventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
@@ -144,6 +151,23 @@ final class ScrollReverser: ObservableObject {
         passiveEventTap = nil
         passiveRunLoopSource = nil
         isEnabled = false
+    }
+
+    private func observeActiveApplication() {
+        let bundleID = Self.iPhoneMirroringBundleID
+        let state = eventState
+
+        let current = NSWorkspace.shared.frontmostApplication
+        state.setIPhoneMirroringFrontmost(current?.bundleIdentifier == bundleID)
+
+        NSWorkspace.shared.notificationCenter
+            .publisher(for: NSWorkspace.didActivateApplicationNotification)
+            .receive(on: RunLoop.main)
+            .sink { notification in
+                let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                state.setIPhoneMirroringFrontmost(app?.bundleIdentifier == bundleID)
+            }
+            .store(in: &cancellables)
     }
 
     private nonisolated static func makeTap(location: CGEventTapLocation, mask: CGEventMask, userInfo: UnsafeMutableRawPointer?) -> CFMachPort? {
@@ -209,13 +233,18 @@ final class ScrollReverser: ObservableObject {
         let source = state.source(for: event)
         let reverseVertical: Bool
         let reverseHorizontal: Bool
-        switch source {
-        case .trackpad:
-            reverseVertical = defaults.bool(forKey: "reverseTrackpad")
-            reverseHorizontal = defaults.bool(forKey: "reverseTrackpadHorizontal")
-        case .mouse:
-            reverseVertical = defaults.bool(forKey: "reverseMouse")
-            reverseHorizontal = defaults.bool(forKey: "reverseMouseHorizontal")
+        if state.isIPhoneMirroringFrontmost() {
+            reverseVertical = defaults.bool(forKey: "reverseHid")
+            reverseHorizontal = false
+        } else {
+            switch source {
+            case .trackpad:
+                reverseVertical = defaults.bool(forKey: "reverseTrackpad")
+                reverseHorizontal = defaults.bool(forKey: "reverseTrackpadHorizontal")
+            case .mouse:
+                reverseVertical = defaults.bool(forKey: "reverseMouse")
+                reverseHorizontal = defaults.bool(forKey: "reverseMouseHorizontal")
+            }
         }
 
         if reverseVertical || reverseHorizontal {
@@ -294,13 +323,27 @@ private final class ScrollEventState: @unchecked Sendable {
     nonisolated(unsafe) private var lastTouchTime: UInt64 = 0
     nonisolated(unsafe) private var touching = 0
     nonisolated(unsafe) private var lastSource = ScrollEventSource.mouse
+    nonisolated(unsafe) private var iPhoneMirroringFrontmost = false
 
     nonisolated func reset() {
         lock.lock()
         lastTouchTime = 0
         touching = 0
         lastSource = .mouse
+        iPhoneMirroringFrontmost = false
         lock.unlock()
+    }
+
+    nonisolated func setIPhoneMirroringFrontmost(_ value: Bool) {
+        lock.lock()
+        iPhoneMirroringFrontmost = value
+        lock.unlock()
+    }
+
+    nonisolated func isIPhoneMirroringFrontmost() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return iPhoneMirroringFrontmost
     }
 
     nonisolated func recordTrackpadTouch(count: Int) {

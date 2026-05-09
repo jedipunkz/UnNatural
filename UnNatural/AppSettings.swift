@@ -17,6 +17,7 @@ final class AppSettings: ObservableObject {
         static let reverseMouse = "reverseMouse"
         static let reverseMouseHorizontal = "reverseMouseHorizontal"
         static let isActive = "isActive"
+        static let reverseHid = "reverseHid"
     }
 
     @Published var isActive: Bool {
@@ -49,6 +50,12 @@ final class AppSettings: ObservableObject {
         }
     }
 
+    @Published var reverseHid: Bool {
+        didSet {
+            UserDefaults.standard.set(reverseHid, forKey: Key.reverseHid)
+        }
+    }
+
     @Published var launchAtLogin: Bool {
         didSet {
             guard launchAtLogin != oldValue else { return }
@@ -71,6 +78,7 @@ final class AppSettings: ObservableObject {
         reverseTrackpadHorizontal = defaults.bool(forKey: Key.reverseTrackpadHorizontal)
         reverseMouse = defaults.bool(forKey: Key.reverseMouse)
         reverseMouseHorizontal = defaults.bool(forKey: Key.reverseMouseHorizontal)
+        reverseHid = defaults.bool(forKey: Key.reverseHid)
         launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
