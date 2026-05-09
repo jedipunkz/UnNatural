@@ -18,15 +18,12 @@ struct SettingsView: View {
                 Toggle("Launch at Login", isOn: $settings.launchAtLogin)
             }
 
-            SettingsSection(title: "iPhone Mirroring App Reverse") {
-                Toggle("Up/Down", isOn: $settings.reverseHid)
-                    .disabled(!settings.isActive)
-            }
-
             SettingsSection(title: "Mouse Reverse") {
                 Toggle("Up/Down", isOn: $settings.reverseMouse)
                     .disabled(!settings.isActive)
                 Toggle("Left/Right", isOn: $settings.reverseMouseHorizontal)
+                    .disabled(!settings.isActive)
+                Toggle("iPhone Mirroring App", isOn: $settings.reverseMouseHid)
                     .disabled(!settings.isActive)
             }
 
@@ -34,6 +31,8 @@ struct SettingsView: View {
                 Toggle("Up/Down", isOn: $settings.reverseTrackpad)
                     .disabled(!settings.isActive)
                 Toggle("Left/Right", isOn: $settings.reverseTrackpadHorizontal)
+                    .disabled(!settings.isActive)
+                Toggle("iPhone Mirroring App", isOn: $settings.reverseTrackpadHid)
                     .disabled(!settings.isActive)
             }
 

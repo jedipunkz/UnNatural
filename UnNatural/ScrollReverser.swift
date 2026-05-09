@@ -221,7 +221,7 @@ final class ScrollReverser: ObservableObject {
         let defaults = UserDefaults.standard
         let shouldReverse = isIPhoneMirroringFrontmost &&
             defaults.bool(forKey: "isActive") &&
-            defaults.bool(forKey: "reverseHid")
+            defaults.bool(forKey: "reverseTrackpadHid")
 
         guard shouldReverse else {
             restoreSwipeScrollDirectionIfNeeded()
@@ -347,7 +347,12 @@ final class ScrollReverser: ObservableObject {
         let reverseVertical: Bool
         let reverseHorizontal: Bool
         if state.isIPhoneMirroringEvent(event) {
-            reverseVertical = defaults.bool(forKey: "reverseHid")
+            switch source {
+            case .trackpad:
+                reverseVertical = defaults.bool(forKey: "reverseTrackpadHid")
+            case .mouse:
+                reverseVertical = defaults.bool(forKey: "reverseMouseHid")
+            }
             reverseHorizontal = false
         } else {
             switch source {
