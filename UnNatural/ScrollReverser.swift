@@ -221,7 +221,7 @@ final class ScrollReverser: ObservableObject {
         let defaults = UserDefaults.standard
         let shouldReverse = isIPhoneMirroringFrontmost &&
             defaults.bool(forKey: "isActive") &&
-            (defaults.bool(forKey: "reverseTrackpadHid") || defaults.bool(forKey: "reverseMouseHid"))
+            defaults.bool(forKey: "reverseTrackpadHid")
 
         guard shouldReverse else {
             restoreSwipeScrollDirectionIfNeeded()
@@ -322,7 +322,7 @@ final class ScrollReverser: ObservableObject {
         if type.rawValue == UInt32(NSEvent.EventType.gesture.rawValue) {
             let nsEvent = NSEvent(cgEvent: event)
             let touching = nsEvent?.touches(matching: .touching, in: nil).count ?? 0
-            if touching >= 2 {
+            if touching >= 1 {
                 state.recordTrackpadTouch(count: touching)
             }
 
@@ -504,7 +504,7 @@ private final class ScrollEventState: @unchecked Sendable {
         let currentTouching = touching
         touching = 0
 
-        if currentTouching >= 2 && touchElapsed < 222_000_000 {
+        if currentTouching >= 1 && touchElapsed < 222_000_000 {
             lastSource = .trackpad
             return lastSource
         }
