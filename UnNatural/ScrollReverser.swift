@@ -492,7 +492,9 @@ private final class ScrollEventState: @unchecked Sendable {
         defer { lock.unlock() }
 
         let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
-        let momentumPhase = NSEvent(cgEvent: event)?.momentumPhase ?? []
+        let nsEvent = NSEvent(cgEvent: event)
+        let phase = nsEvent?.phase ?? []
+        let momentumPhase = nsEvent?.momentumPhase ?? []
         if !continuous {
             lastSource = .mouse
             touching = 0
@@ -509,7 +511,8 @@ private final class ScrollEventState: @unchecked Sendable {
             return lastSource
         }
 
-        if momentumPhase.isEmpty && touchElapsed > 333_000_000 {
+        // A slow trackpad drag can go >333ms without gesture events; keep lastSource while a scroll phase is active.
+        if phase.isEmpty && momentumPhase.isEmpty && touchElapsed > 333_000_000 {
             lastSource = .mouse
             return lastSource
         }
