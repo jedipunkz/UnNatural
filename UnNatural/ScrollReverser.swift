@@ -511,8 +511,10 @@ private final class ScrollEventState: @unchecked Sendable {
             return lastSource
         }
 
-        // A slow trackpad drag can go >333ms without gesture events; keep lastSource while a scroll phase is active.
-        if phase.isEmpty && momentumPhase.isEmpty && touchElapsed > 333_000_000 {
+        // A slow trackpad drag can go >333ms without gesture events, so keep lastSource mid-gesture (.changed).
+        // A gesture that starts without a recent touch (e.g. Magic Mouse) switches back to mouse.
+        let isGestureStart = phase.isEmpty || phase.contains(.began) || phase.contains(.mayBegin)
+        if isGestureStart && momentumPhase.isEmpty && touchElapsed > 333_000_000 {
             lastSource = .mouse
             return lastSource
         }
